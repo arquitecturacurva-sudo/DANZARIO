@@ -9,9 +9,10 @@ See `docs/VALIDATION.md` for actual checks and screenshots. A real Firebase proj
 ## Validation
 
 - TypeScript, ESLint, formatting, and production build passed.
-- 8 planning tests, 10 Firestore rules tests, and 10 desktop/mobile Chromium workflows passed locally.
+- 8 planning tests, 10 Firestore rules tests, and 12 desktop/mobile Chromium workflows passed locally.
 - Production dependency audit reports zero vulnerabilities.
 - Windows WebKit cannot launch locally; Safari verification remains pending. The Linux CI includes WebKit coverage.
+- Browser diagnostics only exempt the documented WebKit emulator-channel teardown messages during explicitly tracked hard navigation. A separate in-app navigation control requires zero errors, and closed mobile navigation is hidden from keyboard and accessibility traversal.
 
 ## Preview screenshots
 

@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
-async function login(page: Page) {
-  await page.goto("/");
+type Navigation = (path: string) => Promise<unknown>;
+async function login(
+  page: Page,
+  navigate: Navigation = (path) => page.goto(path),
+) {
+  await navigate("/");
   await page
     .getByRole("button", { name: "Entrar al entorno de prueba" })
     .click();
@@ -8,8 +12,12 @@ async function login(page: Page) {
     page.getByRole("heading", { name: "Hola, profe" }),
   ).toBeVisible();
 }
-async function createService(page: Page, name: string) {
-  await page.goto("/servicios/nuevo");
+async function createService(
+  page: Page,
+  name: string,
+  navigate: Navigation = (path) => page.goto(path),
+) {
+  await navigate("/servicios/nuevo");
   await page.getByLabel("Nombre del servicio", { exact: true }).fill(name);
   await page
     .getByLabel("Descripción", { exact: true })
@@ -25,11 +33,40 @@ async function createService(page: Page, name: string) {
 }
 test("teacher completes the full planning and attendance workflow", async ({
   page,
+  browserName,
 }, testInfo) => {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  await login(page);
-  await createService(page, "Heels mensual");
+  const teardownWarnings: string[] = [];
+  let pendingDocumentReplacements = 0;
+  async function hardNavigation(action: () => Promise<unknown>) {
+    pendingDocumentReplacements++;
+    try {
+      return await action();
+    } finally {
+      pendingDocumentReplacements--;
+    }
+  }
+  const navigate: Navigation = (path) => hardNavigation(() => page.goto(path));
+  const reload = () => hardNavigation(() => page.reload());
+  page.on("pageerror", (e) => {
+    // WebKit r2370 misclassifies document-replacement XHR cancellation:
+    // https://github.com/microsoft/playwright/issues/43120
+    // Allow only emulator Firestore channel teardown while a hard navigation
+    // is pending. The same message during ordinary app use must still fail.
+    const knownTeardown =
+      /\/127\.0\.0\.1:8080\/google\.firestore\.v1\.Firestore\/(?:Listen|Write)\/channel\?.* due to access control checks\.$/.test(
+        e.message,
+      );
+    if (
+      browserName === "webkit" &&
+      pendingDocumentReplacements > 0 &&
+      knownTeardown
+    ) {
+      teardownWarnings.push(e.message);
+    } else errors.push(e.message);
+  });
+  await login(page, navigate);
+  await createService(page, "Heels mensual", navigate);
   const serviceUrl = page.url();
   await page.getByRole("link", { name: "Nuevo ciclo", exact: true }).click();
   await page.getByLabel("Nombre del ciclo").fill("Octubre · Diana");
@@ -65,14 +102,14 @@ test("teacher completes the full planning and attendance workflow", async ({
   await page.getByRole("link", { name: /Confianza en movimiento/ }).click();
   const classUrl = page.url();
   await expect(page.getByText("Inspirada", { exact: true })).toBeVisible();
-  await page.reload();
+  await reload();
   await expect(
     page.getByRole("heading", { name: "Confianza en movimiento", exact: true }),
   ).toBeVisible();
-  await page.goto(cycleUrl);
+  await navigate(cycleUrl);
   await expect(page.getByText("100% asistencia")).toBeVisible();
   await expect(page.getByText("1 de 1 clases dadas")).toBeVisible();
-  await page.goto(serviceUrl);
+  await navigate(serviceUrl);
   await page.getByRole("link", { name: "Nuevo proceso", exact: true }).click();
   await page.getByLabel("Nombre del proceso").fill("Coreografía · Octubre");
   await page.getByLabel("Estilo", { exact: true }).fill("Heels");
@@ -86,25 +123,25 @@ test("teacher completes the full planning and attendance workflow", async ({
   await page.getByLabel("Intro", { exact: true }).click();
   await expect(page.getByLabel("Intro", { exact: true })).toBeChecked();
   await expect(page.getByText("50%", { exact: true })).toBeVisible();
-  await page.goto(classUrl);
+  await navigate(classUrl);
   await page.getByRole("button", { name: "Marcar como pendiente" }).click();
   await expect(
     page.getByRole("button", { name: "Marcar como dada" }),
   ).toBeVisible();
-  await page.goto(cycleUrl);
+  await navigate(cycleUrl);
   await expect(page.getByText("Sin clases dadas")).toBeVisible();
-  await page.goto(serviceUrl);
+  await navigate(serviceUrl);
   await page.getByRole("button", { name: "Eliminar", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Hay registros vinculados" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Cancelar", exact: true }).click();
-  await page.goto("/");
+  await navigate("/");
   await expect(
     page.getByRole("heading", { name: "Hola, profe" }),
   ).toBeVisible();
   await expect(page.getByText("01", { exact: true })).toHaveCount(3);
-  await createService(page, "Sesión privada");
+  await createService(page, "Sesión privada", navigate);
   await page.getByRole("link", { name: "Editar", exact: true }).click();
   await page.getByLabel("Tipo de seguimiento").selectOption("por_clase");
   await page.getByLabel("Precio (S/)").fill("80");
@@ -115,7 +152,7 @@ test("teacher completes the full planning and attendance workflow", async ({
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Sesión privada",
   );
-  await createService(page, "Workshop · Flow");
+  await createService(page, "Workshop · Flow", navigate);
   await page.getByRole("link", { name: "Editar", exact: true }).click();
   await page.getByLabel("Tipo de seguimiento").selectOption("ninguno");
   await page.getByLabel("Precio (S/)").fill("50");
@@ -126,12 +163,12 @@ test("teacher completes the full planning and attendance workflow", async ({
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Workshop · Flow",
   );
-  await page.goto("/clases/nueva");
+  await navigate("/clases/nueva");
   await page.getByLabel("Tema de la clase").fill("Explora tu propio ritmo");
   await page.getByLabel("Género / estilo").fill("Contemporáneo");
   await page.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(page).toHaveURL(/\/clases$/);
-  await page.goto("/");
+  await navigate("/");
   await expect(
     page.getByRole("link", { name: /Explora tu propio ritmo/ }),
   ).toBeVisible();
@@ -139,6 +176,47 @@ test("teacher completes the full planning and attendance workflow", async ({
     path: testInfo.outputPath("home.png"),
     fullPage: true,
   });
+  expect(errors).toEqual([]);
+  if (teardownWarnings.length)
+    testInfo.annotations.push({
+      type: "browser-limitation",
+      description: `WebKit navigation-only Firestore teardown messages: ${teardownWarnings.length}; https://github.com/microsoft/playwright/issues/43120`,
+    });
+});
+
+test("live subscriptions remain error-free during in-app navigation", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await login(page);
+  await page.getByRole("link", { name: "Crear servicio", exact: true }).click();
+  await page
+    .getByLabel("Nombre del servicio", { exact: true })
+    .fill("Control de suscripciones");
+  await page.getByRole("button", { name: "Guardar cambios" }).click();
+  await page.getByRole("link", { name: /Control de suscripciones/ }).click();
+  await page.getByRole("link", { name: "Editar", exact: true }).click();
+  await page
+    .getByLabel("Descripción", { exact: true })
+    .fill("Movimiento con intención");
+  await page.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(
+    page.getByText("Movimiento con intención", { exact: true }),
+  ).toBeVisible();
+  const mobileNavigation = page.getByRole("navigation", {
+    name: "Navegación móvil",
+  });
+  const navigation = (await mobileNavigation.isVisible())
+    ? mobileNavigation
+    : page.getByRole("navigation", { name: "Navegación principal" });
+  await navigation
+    .getByRole("link", { name: "Servicios", exact: true })
+    .click();
+  await page.getByRole("link", { name: /Control de suscripciones/ }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "Control de suscripciones",
+  );
   expect(errors).toEqual([]);
 });
 test("edits and removes records without leaving linked children", async ({

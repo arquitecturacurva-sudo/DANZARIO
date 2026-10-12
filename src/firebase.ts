@@ -30,11 +30,5 @@ export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 if (emulator && auth && db) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  // Keep emulator streams same-origin through Vite's proxy. WebKit otherwise
-  // reports cross-origin access-control errors while navigation closes them.
-  connectFirestoreEmulator(
-    db,
-    window.location.hostname,
-    Number(window.location.port),
-  );
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }

@@ -1109,11 +1109,13 @@
   }
   @media (max-width: 1023px) {
     .sidebar {
+      visibility: hidden;
       transform: translateX(-100%);
       transition: transform 0.2s;
       padding-top: calc(25px + env(safe-area-inset-top));
     }
     .sidebar.open {
+      visibility: visible;
       transform: translateX(0);
     }
     .sidebar-overlay {

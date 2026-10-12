@@ -9,12 +9,14 @@ Verified locally on October 11, 2026, using Node 24, Java 21, and Firebase Auth/
 | Production build                                | Passed                                |
 | Planning/domain tests                           | 8 passed                              |
 | Firestore ownership/schema tests                | 10 passed                             |
-| Desktop Chromium teacher workflows              | 5 passed                              |
-| iPhone-sized Chromium teacher workflows         | 5 passed                              |
+| Desktop Chromium teacher workflows              | 6 passed                              |
+| iPhone-sized Chromium teacher workflows         | 6 passed                              |
 | 375px and 390px overflow/navigation checks      | Passed, included in browser workflows |
 | Production dependencies, `npm audit --omit=dev` | 0 vulnerabilities                     |
 
-The complete teacher workflow creates a process service, monthly cycle with student goals/criteria, and a class with inherited itinerary and roster. It records attendance and emotional check-ins, refreshes, verifies attendance percentages, tracks choreography sections, reverses class completion, and verifies dependency-blocked deletion. Separate tests cover editing/deleting every record type, failed-save recovery, dirty-form warnings, free-class filters, and clearing records across sign-out/account changes.
+The complete teacher workflow creates a process service, monthly cycle with student goals/criteria, and a class with inherited itinerary and roster. It records attendance and emotional check-ins, refreshes, verifies attendance percentages, tracks choreography sections, reverses class completion, and verifies dependency-blocked deletion. Separate tests cover editing/deleting every record type, failed-save recovery, dirty-form warnings, free-class filters, clearing records across sign-out/account changes, and live subscriptions during ordinary in-app navigation.
+
+The WebKit test records the documented [document-replacement XHR diagnostic bug](https://github.com/microsoft/playwright/issues/43120). Its exception applies only to emulator Firestore Listen/Write channel access-control messages emitted while an explicitly tracked hard navigation is pending. All other page errors fail the test. A separate in-app navigation control has no diagnostic exceptions and requires zero page errors.
 
 All tests use local emulator data. The isolated test teachers and screenshot examples are not seeded into production.
 
