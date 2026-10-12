@@ -30,6 +30,8 @@ npm run dev:emulator
 
 Open the displayed localhost URL, then select **Entrar al entorno de prueba**. This creates an anonymous user in the **local Auth emulator**, not a real Firebase account. Refresh keeps that session; signing out and entering again creates a separate test teacher. The Firestore emulator enforces the same rules as production.
 
+Browser Firestore traffic passes through Vite's same-origin development proxy to port 8080, so WebKit navigation does not interrupt cross-origin streams. Direct rules tests connect to port 8080. This proxy is disabled for production builds.
+
 Emulator sign-in is gated by Vite development mode and `VITE_USE_EMULATORS=true`; production builds cannot enable it. Emulator data is temporary and should be treated as test data.
 
 ## Connect a new Firebase project
