@@ -28,7 +28,6 @@ All tests use local emulator data. The isolated test teachers and screenshot exa
 
 - **Safari/WebKit:** the downloaded Windows WebKit browser cannot launch on this host. Desktop and iPhone-sized Chromium pass; the WebKit project remains in the Linux CI suite but has not been verified locally. Actual iPhone safe-area and Google popup behavior require device verification.
 - **Cloud Firebase:** a new real project, Google provider, rules deployment, and authorized domains are not yet configured. Google cloud sign-in and cloud Firestore writes are therefore not claimed as verified.
-- **GitHub PR:** the local GitHub CLI credential is expired, the connector has no push access to upstream, and the user requested waiting until they are at their laptop. The local feature branch and PR description are ready; no PR has been published.
 - **Vercel preview:** no Danzario project was found in the connected Vercel account. Configuration and setup instructions are included; no hosted preview or production release is claimed.
 - **Development tooling audit:** 11 advisories remain in Firebase CLI transitive development dependencies, including an upstream `braces` advisory with no newer published version at verification time. These are not included in the shipped browser dependency tree. No broad forced downgrade or untested transitive major override was applied.
 - **Build size:** Vite reports a Firebase vendor chunk above its 500 kB warning threshold (approximately 164 kB compressed). The production build succeeds; this is a performance warning, not a build failure.
